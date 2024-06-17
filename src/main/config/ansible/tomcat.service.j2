@@ -1,0 +1,15 @@
+[Unit]
+Description=Tomcat 10
+After=network.target
+
+[Service]
+Type=forking
+User=ubuntu
+Group=ubuntu
+Environment="JAVA_HOME={{JDK_HOME.stdout}}"
+Environment="CATALINA_HOME={{TOMCAT_HOME_DIR}}"
+ExecStart={{TOMCAT_HOME_DIR}}/bin/startup.sh
+ExecStop={{TOMCAT_HOME_DIR}}/bin/shutdown.sh
+Restart=always
+[Install]
+WantedBy=multi-user.target

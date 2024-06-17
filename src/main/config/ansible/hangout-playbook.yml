@@ -1,0 +1,58 @@
+---
+- name: hangout application playbook
+  hosts: all
+  vars:
+    TOMCAT_DOWNLOAD_URL: "https://dlcdn.apache.org/tomcat/tomcat-10/v10.1.24/bin/apache-tomcat-10.1.24.tar.gz"
+    TOMCAT_HOME_DIR: "/u01/middleware/apache-tomcat-10.1.24"
+  tasks:
+    - name: install jdk17  
+      apt:
+        name: "openjdk-17-jdk"
+        state: present
+        update_cache: yes
+      become: yes
+    - name: create middleware directory
+      file:
+        path: /u01/middleware
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+      become: yes
+    - name: download tomcat10
+      get_url:
+        url: "{{TOMCAT_DOWNLOAD_URL}}"          
+        dest: /u01/middleware
+    - name: unzip tomcat
+      unarchive:
+        src: /u01/middleware/apache-tomcat-10.1.24.tar.gz
+        dest: /u01/middleware
+        remote_src: true
+    - name: find jdk17 location
+      shell: "readlink -f $(which java) | sed 's/bin.*//g'"  
+      register: JDK_HOME  
+    - name: install tomcat as service
+      template:
+        src: tomcat.service.j2
+        dest: /etc/systemd/system/tomcat.service
+      become: yes
+      notify:
+        - tomcatreload
+    - name: deploy
+      copy:
+        src: "{{ lookup('env', 'WORKSPACE') }}/target/hangout.war" 
+        dest: /u01/middleware/apache-tomcat-10.1.24/webapps
+      notify:
+        - tomcatrestart
+  handlers:
+    - name: tomcatreload
+      service:
+        name: tomcat
+        state: reloaded
+        enabled: yes
+      become: yes
+    - name: tomcatrestart
+      service:
+        name: tomcat
+        state: restarted
+      become: yes          
+...
